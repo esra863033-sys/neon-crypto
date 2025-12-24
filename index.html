@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Crypto Converter</title>
+    <style>
+        /* --- CSS BAŞLANGICI --- */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            background-color: #050505;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(68, 0, 255, 0.2) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 150, 0.2) 0%, transparent 20%);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.2),
+                inset 0 0 20px rgba(255, 0, 255, 0.1);
+            text-align: center;
+            width: 400px;
+            position: relative;
+        }
+
+        /* Neon Efektleri */
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: #fff;
+            text-shadow: 
+                0 0 5px #fff,
+                0 0 10px #fff,
+                0 0 20px #ff00de,
+                0 0 30px #ff00de,
+                0 0 40px #ff00de;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #00e5ff;
+            text-shadow: 0 0 5px #00e5ff;
+            font-size: 0.9rem;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid #00e5ff;
+            box-shadow: 0 0 5px #00e5ff;
+        }
+
+        button {
+            background: transparent;
+            color: #fff;
+            border: 2px solid #ff00de;
+            cursor: pointer;
+            margin-top: 1rem;
+            text-shadow: 0 0 5px #ff00de;
+            box-shadow: 0 0 10px #ff00de, inset 0 0 10px #ff00de;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff00de;
+            color: #000;
+            box-shadow: 0 0 20px #ff00de, 0 0 40px #ff00de;
+        }
+
+        #result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #00e5ff;
+            display: none; /* Başlangıçta gizli */
+        }
+
+        .price-display {
+            font-size: 1.8rem;
+            color: #00e5ff;
+            text-shadow: 0 0 10px #00e5ff;
+        }
+        
+        .loading {
+            color: #ffff00;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>CRYPTO<br>NEXUS</h1>
+        
+        <div class="input-group">
+            <label>KRİPTO PARA BİRİMİ</label>
+            <select id="coinSelect">
+                <option value="bitcoin">BITCOIN (BTC)</option>
+                <option value="ethereum">ETHEREUM (ETH)</option>
+                <option value="solana">SOLANA (SOL)</option>
+                <option value="ripple">RIPPLE (XRP)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>HEDEF PARA BİRİMİ</label>
+            <select id="currencySelect">
+                <option value="TRY">TÜRK LİRASI (TRY)</option>
+                <option value="EUR">EURO (EUR)</option>
+                <option value="GBP">STERLİN (GBP)</option>
+                <option value="JPY">JAPON YENİ (JPY)</option>
+            </select>
+        </div>
+
+        <button onclick="calculate()">HESAPLA & DÖNÜŞTÜR</button>
+        <p class="loading" id="loadingText">VERİLER UZAYDAN ÇEKİLİYOR...</p>
+
+        <div id="result">
+            <p style="font-size: 0.8rem; color: #aaa;">ANLIK DEĞER</p>
+            <div class="price-display" id="finalPrice">0.00</div>
+            <p id="detailText" style="margin-top:5px; font-size:0.8rem;"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- JAVASCRIPT BAŞLANGICI ---
+        async function calculate() {
+            const coin = document.getElementById('coinSelect').value;
+            const currency = document.getElementById('currencySelect').value;
+            const resultDiv = document.getElementById('result');
+            const finalPriceEl = document.getElementById('finalPrice');
+            const detailTextEl = document.getElementById('detailText');
+            const loadingEl = document.getElementById('loadingText');
+
+            resultDiv.style.display = 'none';
+            loadingEl.style.display = 'block';
+
+            try {
+                // 1. ADIM: Kripto Servisine Git (API 1)
+                const cryptoRes = await fetch(`/api/crypto-price?coin=${coin}`);
+                const cryptoData = await cryptoRes.json();
+                
+                if(cryptoData.error) throw new Error(cryptoData.error);
+                
+                const usdPrice = cryptoData.usd_price;
+
+                // 2. ADIM: Döviz Servisine Git (API 2 - Önceki veriyi kullanarak)
+                const convertRes = await fetch(`/api/convert-currency?amount=${usdPrice}&target=${currency}`);
+                const convertData = await convertRes.json();
+
+                if(convertData.error) throw new Error(convertData.error);
+
+                // Sonucu Göster
+                loadingEl.style.display = 'none';
+                resultDiv.style.display = 'block';
+                
+                // Para birimi formatlama
+                const formatter = new Intl.NumberFormat('tr-TR', {
+                    style: 'currency',
+                    currency: currency,
+                });
+
+                finalPriceEl.innerText = formatter.format(convertData.converted_value);
+                detailTextEl.innerText = `1 ${coin.toUpperCase()} = ${usdPrice} USD`;
+
+            } catch (error) {
+                loadingEl.style.display = 'none';
+                alert("Hata oluştu: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
